@@ -1,2 +1,2 @@
-__version__ = "0.1.17"  # 必须与pyproject.toml完全一致
-__name__ = "encrypt_tools_library"  # 可选但推荐
+__version__ = "0.1.18"  # 必须与pyproject.toml完全一致
+__name__ = "encrypt-tools-library"  # 可选但推荐
