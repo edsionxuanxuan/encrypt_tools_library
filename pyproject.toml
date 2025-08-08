@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "encrypt_tools_library"
-version = "0.1.10"
+version = "0.1.11"
 description = "encrypt tools"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -16,6 +16,14 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License"
 ]
+
+# 显式声明包含的包（重要）
+[tool.setuptools]
+packages = ["encrypt_tools_library"]  # 替换为你的实际包名
+
+# 确保包含非Python文件（如果有）
+[tool.setuptools.package-data]
+encrypt_tools_library = ["*.txt", "*.md", "*.json"]  # 根据需要调整
 
 [project.urls]
 Homepage = "https://github.com/edsionxuanxuan/encrypt_tools_library"
