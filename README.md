@@ -3,5 +3,5 @@
 
 ## INSTALL
 ```bash
-pip install encrypt_tools_library
+pip install encrypt-tools-library
 ```

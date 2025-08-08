@@ -31,6 +31,18 @@ jobs:
       run: |
         pip install build wheel
 
+    - name: Get version from pyproject.toml
+      id: get_version
+      run: |
+        VERSION=$(python -c "import toml; print(toml.load('pyproject.toml')['project']['version'])")
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Create Git tag
+      uses: rickstaa/action-create-tag@v1
+      with:
+        tag: v${{ steps.get_version.outputs.version }}
+        message: "Release v${{ steps.get_version.outputs.version }}"
+
     - name: Build Package
       run: |
         rm -rf dist/ build/
