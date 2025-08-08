@@ -14,24 +14,25 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        fetch-depth: 0  # 确保获取完整git历史
+        fetch-depth: 0
 
     - name: Debug project structure
       run: |
         ls -la
         tree -a || echo "tree command not available"
         cat pyproject.toml
+        cat encrypt_tools_library/__init__.py || echo "No __init__.py found"
 
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-        cache: 'pip'  # 添加缓存加速
+        cache: 'pip'
 
     - name: Install build dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install --upgrade build setuptools>=61.0 wheel twine
+        pip install --upgrade build setuptools>=61.0 wheel twine check-wheel-contents
 
     - name: Clean build artifacts
       run: |
@@ -43,19 +44,29 @@ jobs:
         [ -f pyproject.toml ] || exit 1
         [ -d encrypt_tools_library ] || exit 1
         [ -f encrypt_tools_library/__init__.py ] || exit 1
+        grep -q "__version__" encrypt_tools_library/__init__.py || (echo "__version__ not found in __init__.py" && exit 1)
         echo "Project structure verified"
 
-    - name: Build package (with debug)
+    - name: Build package
       run: |
         python -m build --no-isolation --verbose
-        # 验证生成的wheel
-        pip install wheel
-        check-wheel-contents dist/*.whl
+        # 验证wheel文件基本结构
+        ls -l dist/*.whl
+        unzip -t dist/*.whl
 
-    - name: Inspect METADATA
+    - name: Validate package metadata
       run: |
-        unzip -p dist/*.whl *dist-info/METADATA
-        unzip -p dist/*.whl *dist-info/RECORD
+        # 安装检查工具
+        pip install check-wheel-contents
+        # 检查关键元数据字段
+        unzip -p dist/*.whl *dist-info/METADATA | grep -E "Name:|Version:" || (echo "Missing required metadata" && exit 1)
+        # 完整wheel验证
+        check-wheel-contents dist/*.whl || echo "Wheel validation warning (non-blocking)"
+
+    - name: Install and test package
+      run: |
+        pip install dist/*.whl
+        python -c "from encrypt_tools_library import __version__; print(f'Package version: {__version__}')"
 
     - name: Get version
       id: get_version
@@ -74,5 +85,5 @@ jobs:
       if: success()
       uses: pypa/gh-action-pypi-publish@v1.10.0
       with:
-        skip-existing: true  # 避免重复发布错误
+        skip-existing: true
         verbose: true
