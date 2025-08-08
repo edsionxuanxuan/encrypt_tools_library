@@ -8,7 +8,7 @@ jobs:
   build-and-publish:
     permissions:
       contents: write
-      id-token: write # 必须添加这一行
+      id-token: write
 
     runs-on: ubuntu-latest
 
@@ -19,10 +19,14 @@ jobs:
 
     - name: Debug project structure
       run: |
+        echo "=== Project Structure ==="
         ls -la
-        tree -a || echo "tree command not available"
+        echo "=== TOML Content ==="
         cat pyproject.toml
-        cat encrypt_tools_library/__init__.py || echo "No __init__.py found"
+        echo "=== __init__.py Content ==="
+        cat encrypt_tools_library/__init__.py || { echo "ERROR: __init__.py missing"; exit 1; }
+        echo "=== Version Check ==="
+        grep "__version__" encrypt_tools_library/__init__.py || { echo "ERROR: __version__ not found"; exit 1; }
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -37,37 +41,40 @@ jobs:
 
     - name: Clean build artifacts
       run: |
-        rm -rf dist/ build/ *.egg-info/
+        echo "=== Cleaning ==="
+        rm -rf dist/ build/ *.egg-info/ .eggs/
         find . -name '__pycache__' -exec rm -rf {} +
 
-    - name: Verify project structure
+    - name: Build package with enhanced validation
       run: |
-        [ -f pyproject.toml ] || exit 1
-        [ -d encrypt_tools_library ] || exit 1
-        [ -f encrypt_tools_library/__init__.py ] || exit 1
-        grep -q "__version__" encrypt_tools_library/__init__.py || (echo "__version__ not found in __init__.py" && exit 1)
-        echo "Project structure verified"
-
-    - name: Build package
-      run: |
-        python -m build --no-isolation --verbose
-        # 验证wheel文件基本结构
-        ls -l dist/*.whl
-        unzip -t dist/*.whl
-
-    - name: Validate package metadata
-      run: |
-        # 安装检查工具
-        pip install check-wheel-contents
-        # 检查关键元数据字段
-        unzip -p dist/*.whl *dist-info/METADATA | grep -E "Name:|Version:" || (echo "Missing required metadata" && exit 1)
-        # 完整wheel验证
-        check-wheel-contents dist/*.whl || echo "Wheel validation warning (non-blocking)"
+        echo "=== Building Package ==="
+        python -m build --no-isolation --verbose 2>&1 | tee build.log
+        
+        echo "=== Verifying Artifacts ==="
+        ls -l dist/
+        unzip -t dist/*.whl || { echo "ERROR: Wheel file corrupted"; exit 1; }
+        
+        echo "=== Extracting Metadata ==="
+        METADATA_FILE=$(unzip -l dist/*.whl | grep -oE '[^ ]*dist-info/METADATA')
+        unzip -p dist/*.whl "$METADATA_FILE" > extracted_metadata.txt
+        echo "=== METADATA CONTENT ==="
+        cat extracted_metadata.txt
+        
+        echo "=== Validating Critical Fields ==="
+        grep -q "Name: encrypt_tools_library" extracted_metadata.txt || { echo "ERROR: Name field missing"; exit 1; }
+        grep -q "Version: " extracted_metadata.txt || { echo "ERROR: Version field missing"; exit 1; }
+        
+        echo "=== Wheel Contents ==="
+        unzip -l dist/*.whl
 
     - name: Install and test package
       run: |
-        pip install dist/*.whl
+        echo "=== Installing Package ==="
+        pip install --force-reinstall dist/*.whl
+        echo "=== Installed Version ==="
         python -c "from encrypt_tools_library import __version__; print(f'Package version: {__version__}')"
+        echo "=== Package Location ==="
+        python -c "import encrypt_tools_library; print(encrypt_tools_library.__file__)"
 
     - name: Get version
       id: get_version
