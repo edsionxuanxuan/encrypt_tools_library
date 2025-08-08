@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "encrypt_tools_library"
-version = "0.1.0"
+version = "0.1.1"
 description = "encrypt tools"
 readme = "README.md"
 license = { file = "LICENSE" }
