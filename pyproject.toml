@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "encrypt_tools_library"
+version = "0.1.0"
+description = "encrypt tools"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name="xD", email="1257974173@qq.com" }]
+requires-python = ">=3.11"
+dependencies = ["pycryptodome>=3.23.0"]
+keywords = ["example", "pypi", "package"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License"
+]
+
+[project.urls]
+Homepage = "https://github.com/edsionxuanxuan/encrypt_tools_library"
