@@ -15,6 +15,13 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Debug - list repo files
+      run: |
+        pwd
+        ls -l
+        ls -l encrypt_tools_library || echo "encrypt_tools_library directory not found"
+        cat pyproject.toml
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -43,8 +50,10 @@ jobs:
     - name: Build package
       run: python -m build
 
-    - name: Show METADATA content (for debugging)
-      run: unzip -p dist/encrypt_tools_library-*.whl encrypt_tools_library-*.dist-info/METADATA
+    - name: Debug - list dist contents and show METADATA
+      run: |
+        ls -l dist
+        unzip -p dist/encrypt_tools_library-*.whl encrypt_tools_library-*.dist-info/METADATA
 
     - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@v1.10.0
