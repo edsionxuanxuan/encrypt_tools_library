@@ -23,7 +23,7 @@ jobs:
     - name: Install build dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install build twine toml
+        pip install --upgrade build setuptools wheel twine toml
 
     - name: Get version from pyproject.toml
       id: get_version
@@ -37,8 +37,14 @@ jobs:
         tag: v${{ steps.get_version.outputs.version }}
         message: "Release v${{ steps.get_version.outputs.version }}"
 
+    - name: Clean previous builds
+      run: rm -rf build dist *.egg-info
+
     - name: Build package
       run: python -m build
+
+    - name: Show METADATA content (for debugging)
+      run: unzip -p dist/encrypt_tools_library-*.whl encrypt_tools_library-*.dist-info/METADATA
 
     - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@v1.10.0
