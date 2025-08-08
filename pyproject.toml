@@ -3,8 +3,8 @@ requires = ["setuptools>=61.0","wheel","build"]
 build-backend = "setuptools.build_meta"
 
 [project]
-Name = "encrypt_tools_library"
-version = "0.1.8"
+name = "encrypt_tools_library"
+version = "0.1.9"
 description = "encrypt tools"
 readme = "README.md"
 license = { file = "LICENSE" }
