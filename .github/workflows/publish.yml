@@ -19,14 +19,22 @@ jobs:
 
     - name: Debug project structure
       run: |
-        echo "=== Project Structure ==="
-        ls -la
-        echo "=== TOML Content ==="
-        cat pyproject.toml
-        echo "=== __init__.py Content ==="
-        cat encrypt_tools_library/__init__.py || { echo "ERROR: __init__.py missing"; exit 1; }
-        echo "=== Version Check ==="
-        grep "__version__" encrypt_tools_library/__init__.py || { echo "ERROR: __version__ not found"; exit 1; }
+        echo "=== 项目结构验证 ==="
+        [ -f pyproject.toml ] || { echo "错误：缺少pyproject.toml"; exit 1; }
+        [ -d encrypt_tools_library ] || { echo "错误：缺少包目录"; exit 1; }
+        [ -f encrypt_tools_library/__init__.py ] || { echo "错误：缺少__init__.py"; exit 1; }
+        
+        echo "=== 版本号验证 ==="
+        PYPROJECT_VERSION=$(grep 'version =' pyproject.toml | cut -d'"' -f2)
+        INIT_VERSION=$(grep '__version__' encrypt_tools_library/__init__.py | cut -d'"' -f2)
+        
+        echo "pyproject.toml版本: $PYPROJECT_VERSION"
+        echo "__init__.py版本: $INIT_VERSION"
+        
+        [ "$PYPROJECT_VERSION" == "$INIT_VERSION" ] || {
+          echo "错误：版本号不一致"; 
+          exit 1
+        }
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -37,44 +45,56 @@ jobs:
     - name: Install build dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install --upgrade build setuptools>=61.0 wheel twine check-wheel-contents
+        pip install --upgrade build setuptools>=61.0 wheel twine
 
     - name: Clean build artifacts
       run: |
-        echo "=== Cleaning ==="
+        echo "=== 彻底清理 ==="
         rm -rf dist/ build/ *.egg-info/ .eggs/
-        find . -name '__pycache__' -exec rm -rf {} +
+        find . -type d -name '__pycache__' -exec rm -rf {} +
+        find . -type f -name '*.py[co]' -delete
 
-    - name: Build package with enhanced validation
+    - name: Generate egg-info (关键修复)
       run: |
-        echo "=== Building Package ==="
-        python -m build --no-isolation --verbose 2>&1 | tee build.log
-        
-        echo "=== Verifying Artifacts ==="
-        ls -l dist/
-        unzip -t dist/*.whl || { echo "ERROR: Wheel file corrupted"; exit 1; }
-        
-        echo "=== Extracting Metadata ==="
-        METADATA_FILE=$(unzip -l dist/*.whl | grep -oE '[^ ]*dist-info/METADATA')
-        unzip -p dist/*.whl "$METADATA_FILE" > extracted_metadata.txt
-        echo "=== METADATA CONTENT ==="
-        cat extracted_metadata.txt
-        
-        echo "=== Validating Critical Fields ==="
-        grep -q "Name: encrypt_tools_library" extracted_metadata.txt || { echo "ERROR: Name field missing"; exit 1; }
-        grep -q "Version: " extracted_metadata.txt || { echo "ERROR: Version field missing"; exit 1; }
-        
-        echo "=== Wheel Contents ==="
-        unzip -l dist/*.whl
+        echo "=== 生成egg-info =="
+        python setup.py egg_info
+        echo "=== PKG-INFO 内容 ==="
+        cat *.egg-info/PKG-INFO
+        grep -q "Name: encrypt_tools_library" *.egg-info/PKG-INFO || exit 1
+        grep -q "Version: " *.egg-info/PKG-INFO || exit 1
 
-    - name: Install and test package
+    - name: Build with metadata assurance
       run: |
-        echo "=== Installing Package ==="
+        echo "=== 构建wheel包 ==="
+        python -m build --no-isolation --wheel
+        
+        echo "=== 验证wheel内容 ==="
+        WHEEL_FILE=$(ls dist/*.whl)
+        echo "Wheel文件: $WHEEL_FILE"
+        
+        echo "=== 提取关键元数据 ==="
+        unzip -p "$WHEEL_FILE" *.dist-info/METADATA > metadata.txt
+        echo "=== 元数据内容 ==="
+        cat metadata.txt
+        
+        echo "=== 验证必要字段 ==="
+        grep -q "Name: encrypt_tools_library" metadata.txt || {
+          echo "错误：Name字段缺失"; 
+          exit 1
+        }
+        grep -q "Version: " metadata.txt || {
+          echo "错误：Version字段缺失"; 
+          exit 1
+        }
+
+    - name: Install and verify
+      run: |
+        echo "=== 安装验证 ==="
         pip install --force-reinstall dist/*.whl
-        echo "=== Installed Version ==="
-        python -c "from encrypt_tools_library import __version__; print(f'Package version: {__version__}')"
-        echo "=== Package Location ==="
-        python -c "import encrypt_tools_library; print(encrypt_tools_library.__file__)"
+        echo "=== 版本检查 ==="
+        python -c "from encrypt_tools_library import __version__; print(f'安装版本: {__version__}')"
+        echo "=== 文件位置 ==="
+        python -c "import encrypt_tools_library; print(f'模块路径: {encrypt_tools_library.__file__}')"
 
     - name: Get version
       id: get_version
